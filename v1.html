@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Palayan Road Hazard Map - Custom Image</title>
+
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+
+    <!-- Leaflet CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    />
+
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+        background: #2c3e50;
+      }
+
+      header {
+        background: linear-gradient(135deg, #8b2c2a 0%, #6b2120 100%);
+        color: #ebd0a2;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .logo h1 {
+        font-size: 1.8rem;
+        font-weight: 700;
+      }
+
+      .logo i {
+        font-size: 2rem;
+      }
+
+      .search-container {
+        display: flex;
+        gap: 10px;
+      }
+
+      .search-container input {
+        padding: 10px 15px;
+        border: none;
+        border-radius: 20px;
+        width: 300px;
+        font-size: 1rem;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        background: #f8f4e9;
+        color: #333;
+      }
+
+      .search-container button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 20px;
+        background: #947cca;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      .search-container button:hover {
+        background: #7c65b3;
+      }
+
+      .main-container {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .sidebar {
+        width: 300px;
+        background: #ebd0a2;
+        padding: 20px;
+        overflow-y: auto;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        z-index: 900;
+        transition: transform 0.3s ease;
+        position: relative;
+        height: 100%;
+      }
+
+      .sidebar.hidden {
+        transform: translateX(-100%);
+      }
+
+      .toggle-sidebar {
+        position: absolute;
+        top: 80px;
+        left: 300px;
+        width: 30px;
+        height: 40px;
+        background: #8b2c2a;
+        color: #ebd0a2;
+        border: none;
+        border-radius: 0 5px 5px 0;
+        cursor: pointer;
+        z-index: 950;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: left 0.3s ease;
+      }
+
+      .toggle-sidebar.sidebar-hidden {
+        left: 0;
+      }
+
+      .sidebar h2 {
+        margin-bottom: 15px;
+        color: #8b2c2a;
+        border-bottom: 2px solid rgba(139, 44, 42, 0.3);
+        padding-bottom: 10px;
+      }
+
+      .categories {
+        margin-bottom: 20px;
+      }
+
+      .category {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        margin-bottom: 8px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background 0.3s;
+        color: #333;
+      }
+
+      .category:hover {
+        background: rgba(139, 44, 42, 0.1);
+      }
+
+      .category i {
+        margin-right: 10px;
+        color: #8b2c2a;
+        width: 20px;
+        text-align: center;
+      }
+
+      .category.active {
+        background: rgba(139, 44, 42, 0.2);
+        font-weight: 600;
+        color: #8b2c2a;
+      }
+
+      .places-list {
+        margin-top: 20px;
+      }
+
+      .place-item {
+        display: flex;
+        padding: 12px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.7);
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+
+      .place-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        background: #fff;
+      }
+
+      .place-info {
+        flex: 1;
+        padding: 0 10px;
+      }
+
+      .place-info h3 {
+        font-size: 1rem;
+        margin-bottom: 5px;
+        color: #8b2c2a;
+      }
+
+      .place-info p {
+        font-size: 0.85rem;
+        color: #666;
+      }
+
+      .map-container {
+        flex: 1;
+        position: relative;
+      }
+
+      #map {
+        height: 100%;
+        width: 100%;
+        background-color: #d4c9a6; /* Fallback color if image doesn't load */
+      }
+
+      .map-controls {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 800;
+      }
+
+      .control-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #8b2c2a;
+        border: none;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        font-size: 1.2rem;
+        color: #ebd0a2;
+        transition: background 0.3s;
+      }
+
+      .control-btn:hover {
+        background: #6b2120;
+      }
+
+      .map-legend {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        background: rgba(235, 208, 162, 0.95);
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        z-index: 800;
+        border: 1px solid #8b2c2a;
+        width: 250px;
+        transition: all 0.3s ease;
+      }
+
+      .map-legend h3 {
+        font-size: 1.1rem;
+        margin-bottom: 12px;
+        color: #8b2c2a;
+        text-align: center;
+        border-bottom: 2px solid rgba(139, 44, 42, 0.3);
+        padding-bottom: 8px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .legend-content {
+        margin-top: 10px;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        padding: 8px;
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.6);
+        transition: background 0.3s;
+      }
+
+      .legend-item:hover {
+        background: rgba(255, 255, 255, 0.9);
+      }
+
+      .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        margin-right: 12px;
+        flex-shrink: 0;
+      }
+
+      .legend-label {
+        font-size: 0.95rem;
+        color: #333;
+        font-weight: 500;
+      }
+
+      /* Collapsed */
+      .collapsed .legend-content {
+        display: none;
+      }
+
+      .info-panel {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(235, 208, 162, 0.95);
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        z-index: 800;
+        max-width: 300px;
+        display: none;
+        border: 1px solid #8b2c2a;
+      }
+
+      .info-panel h3 {
+        margin-bottom: 10px;
+        color: #8b2c2a;
+      }
+
+      .info-panel p {
+        font-size: 0.9rem;
+        color: #333;
+        margin-bottom: 10px;
+      }
+
+      .info-panel .close-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+        color: #8b2c2a;
+      }
+
+      .hazard-tag {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 4px;
+        margin-right: 5px;
+        margin-bottom: 5px;
+        font-size: 0.8rem;
+        color: black;
+      }
+
+      .hazard-fire {
+        background-color: #f37106;
+      }
+
+      .hazard-flood {
+        background-color: #008cff;
+      }
+
+      .hazard-structural {
+        background-color: #ffe600;
+      }
+
+      .hazard-road {
+        background-color: #464040;
+      }
+
+      .hazard-Earthquake-prone {
+        background-color: #00aa69;
+      }
+
+      /* Street View Modal */
+      .street-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 2000;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .street-modal.active {
+        display: flex;
+      }
+
+      .modal-content {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        max-width: 90%;
+        max-height: 90%;
+        overflow: auto;
+        position: relative;
+      }
+
+      .modal-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #8b2c2a;
+      }
+
+      .street-image {
+        max-width: 100%;
+        max-height: 70vh;
+        margin-bottom: 15px;
+        border-radius: 5px;
+      }
+
+      .street-details {
+        margin-top: 15px;
+      }
+
+      .fullscreen-toggle {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 800;
+        background: #8b2c2a;
+        color: #ebd0a2;
+        border: none;
+        border-radius: 4px;
+        padding: 8px 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      }
+
+      .fullscreen-toggle:hover {
+        background: #6b2120;
+      }
+
+      @media (max-width: 768px) {
+        .sidebar {
+          position: absolute;
+          height: 100%;
+          z-index: 900;
+          transform: translateX(-100%);
+        }
+
+        .sidebar.visible {
+          transform: translateX(0);
+        }
+
+        .toggle-sidebar {
+          left: 0;
+          top: 70px;
+        }
+
+        .search-container input {
+          width: 180px;
+        }
+
+        .map-legend {
+          max-width: 200px;
+          bottom: 70px;
+          left: 10px;
+        }
+
+        .info-panel {
+          max-width: 85%;
+          right: 10px;
+          bottom: 10px;
+        }
+      }
+
+      /* Bootstrap overrides for better integration */
+      .btn-primary {
+        background-color: #8b2c2a;
+        border-color: #6b2120;
+      }
+
+      .btn-primary:hover {
+        background-color: #6b2120;
+        border-color: #4d1817;
+      }
+
+      .card {
+        border: 1px solid rgba(139, 44, 42, 0.2);
+      }
+
+      .card-header {
+        background-color: rgba(139, 44, 42, 0.1);
+        color: #8b2c2a;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo">
+        <i class="fas fa-map-marked-alt"></i>
+        <h1>Palayan Road Hazard Map</h1>
+      </div>
+      <div class="search-container">
+        <input
+          type="text"
+          id="search-input"
+          placeholder="Search for hazards..."
+          class="form-control"
+        />
+        <button id="search-btn" class="btn btn-primary">
+          <i class="fas fa-search"></i> Search
+        </button>
+      </div>
+    </header>
+
+    <div class="main-container">
+      <button class="toggle-sidebar" id="toggle-sidebar">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+
+      <div class="sidebar" id="sidebar">
+        <h2>Stratum</h2>
+        <div class="places-list">
+          <div class="card mb-2 place-item" data-id="1">
+            <div class="card-body py-2">
+              <h5 class="card-title mb-1">Flooded Street - Main Road</h5>
+              <p class="card-text mb-0">High water level during heavy rains</p>
+            </div>
+          </div>
+          <div class="card mb-2 place-item" data-id="2">
+            <div class="card-body py-2">
+              <h5 class="card-title mb-1">Fire Hazard - Market Area</h5>
+              <p class="card-text mb-0">Overloaded electrical circuits</p>
+            </div>
+          </div>
+          <div class="card mb-2 place-item" data-id="3">
+            <div class="card-body py-2">
+              <h5 class="card-title mb-1">Unstable Structure - Old Building</h5>
+              <p class="card-text mb-0">Cracks in foundation and walls</p>
+            </div>
+          </div>
+          <div class="card mb-2 place-item" data-id="4">
+            <div class="card-body py-2">
+              <h5 class="card-title mb-1">Slippery Road - Mountain Path</h5>
+              <p class="card-text mb-0">Landslide risk during rainy season</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add a Bootstrap alert for notifications -->
+        <div
+          class="alert alert-info mt-3 d-none"
+          role="alert"
+          id="sidebar-alert"
+        >
+          <i class="fas fa-info-circle me-2"></i>
+          <span id="alert-text"></span>
+        </div>
+      </div>
+
+      <div class="map-container">
+        <div id="map"></div>
+
+        <button class="fullscreen-toggle" id="fullscreen-toggle">
+          <i class="fas fa-expand"></i> Full Screen
+        </button>
+
+        <div class="map-controls">
+          <button class="control-btn" id="zoom-in">
+            <i class="fas fa-plus"></i>
+          </button>
+          <button class="control-btn" id="zoom-out">
+            <i class="fas fa-minus"></i>
+          </button>
+          <button class="control-btn" id="locate-me">
+            <i class="fas fa-location-arrow"></i>
+          </button>
+        </div>
+
+        <div class="map-legend collapsed" id="legendBox">
+          <div class="legend-header" onclick="toggleLegend()">
+            Map Legend
+            <span id="toggleIcon">+</span>
+          </div>
+
+          <div class="legend-content">
+            <div class="legend-item">
+              <span class="legend-label">Stratum 1</span>
+              <div class="legend-color" style="background-color: #f3a519"></div>
+              <span class="legend-label">Stratum 4</span>
+              <div class="legend-color" style="background-color: #5c8c0c"></div>
+            </div>
+            <div class="legend-item">
+              <span class="legend-label">Stratum 2</span>
+              <div class="legend-color" style="background-color: #f239e8"></div>
+              <span class="legend-label">Stratum 5</span>
+              <div class="legend-color" style="background-color: #6d2468"></div>
+            </div>
+            <div class="legend-item">
+              <span class="legend-label">Stratum 3</span>
+              <div class="legend-color" style="background-color: #5957ee"></div>
+              <span class="legend-label">Stratum 6</span>
+              <div class="legend-color" style="background-color: #ff6600"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-panel" id="info-panel">
+          <button class="close-btn" id="close-info">
+            <i class="fas fa-times"></i>
+          </button>
+          <h3 id="place-name">Hazard Name</h3>
+          <p id="place-address">Location will appear here</p>
+          <p id="place-description">Description will appear here</p>
+          <div id="hazard-tags"></div>
+          <button id="view-street-btn" class="btn btn-primary mt-2">
+            <i class="fas fa-street-view"></i> View Street Details
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Street View Modal - Using Bootstrap Modal -->
+    <div class="modal fade" id="street-modal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="street-name">Street Name</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <img
+              id="street-image"
+              class="street-image img-fluid rounded"
+              src=""
+              alt="Street view"
+            />
+            <div class="street-details mt-3">
+              <h5>Hazards Identified</h5>
+              <div id="modal-hazards" class="mb-3"></div>
+              <p id="street-description" class="mb-0"></p>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap JS and Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+    <script>
+      // Initialize map with image overlay
+      const map = L.map("map", {
+        crs: L.CRS.Simple, // Use simple coordinate system for image maps
+        minZoom: -2,
+        maxZoom: 4,
+      }).setView([0, 0], 0);
+
+      // Define the image bounds and overlay - REPLACE WITH YOUR IMAGE PATH
+      const imageUrl = "img/1.jpg";
+      const imageBounds = [
+        [-100, -100],
+        [3000, 4000],
+      ];
+
+      // Create custom image overlay
+      const customImageLayer = L.imageOverlay(imageUrl, imageBounds);
+
+      // Add custom image layer
+      customImageLayer.addTo(map);
+      map.fitBounds(imageBounds);
+
+      // Check if image loaded successfully
+      const img = new Image();
+      img.onload = function () {
+        console.log("Custom map image loaded successfully");
+      };
+      img.onerror = function () {
+        console.error("Custom map image failed to load");
+        // Use Bootstrap alert instead of native alert
+        const alertElement = document.getElementById("sidebar-alert");
+        const alertText = document.getElementById("alert-text");
+        alertText.textContent =
+          "Custom map image failed to load. Please check the image path.";
+        alertElement.classList.remove("d-none");
+      };
+      img.src = imageUrl;
+
+      // Sample hazard data
+      const hazards = [
+        {
+          id: 1,
+          name: "Stratum 1",
+          description:
+            "Plumbing problems include leaks, weak water flow, and limited safety features. Electrical issues such as shocks and sparks occur due to poor inspections and lack of protection. Houses show minor cracks and deterioration, with some made of wood. The stratum is fire-prone and moderately vulnerable to earthquakes.",
+          address: " Palayan Road, Philippines",
+          category: "stratum 1",
+          lat: 8.672,
+          lng: 131.047,
+          severity: "medium",
+          tags: ["fire", "electrical", "crowded"],
+          streetView: "img/s1.jpg",
+          streetName: "Palayan Road",
+          streetDescription:
+            "Houses show plumbing leaks, weak water flow, and unsafe electrical setups with little inspection. Minor cracks and wooden houses add risks. The stratum is fire-prone and moderately vulnerable to earthquakes.",
+        },
+        {
+          id: 2,
+          name: "Stratum 2 ",
+          description:
+            "Open canals and poor drainage cause musty odors and water contamination, especially during rains. Plumbing and sanitation issues affect household conditions. Electrical wires are set too low and lack proper safety standards. The stratum is flood-prone and faces fire risks from unsafe wiring.",
+          address: "Main Road, Palayan Road, Philippines",
+          category: "stratum 2",
+          lat: 3,
+          lng: 140.9,
+          severity: "high",
+          tags: ["flood", "water", "accessibility"],
+          streetView: "img/s2.jpg",
+          streetName: "Palayan Road",
+          streetDescription:
+            "Flooding and musty odors arise from open canals and poor drainage. Electrical wires are low and lack proper safety features. The stratum is flood-prone and at risk of fire hazards.",
+        },
+        {
+          id: 3,
+          name: "Stratum 3",
+          description:
+            "Houses show weak structures, poor airflow, and frequent plumbing leaks. Electrical setups are unsafe and increase household risks. Some homes were built with substandard materials that compromise durability. The stratum is highly vulnerable to earthquakes and also at risk of fires.",
+          address: "Palayan Road, Philippines",
+          category: "stratum 3",
+          lat: -4.2,
+          lng: 153,
+          severity: "high",
+          tags: ["Earthquake-prone"],
+          streetView: "img/s3.jpg",
+          streetName: "Palayan Road",
+          streetDescription:
+            "Weak structures, poor ventilation, leaks, and unsafe wiring are common. Some homes use substandard construction materials. The stratum is highly vulnerable to earthquakes and fire risks.",
+        },
+        {
+          id: 4,
+          name: "Stratum 4",
+          description:
+            "Most homes are stable and can withstand disasters for now. Minor problems remain, such as low water flow in some bathrooms. Respondents still note structural aging and gradual deterioration. The stratum faces moderate earthquake risk but no severe hazard dominance.",
+          address: "Palayan Road, Phlippines",
+          category: "stratum 4",
+          lat: 3,
+          lng: 129.047,
+          severity: "medium",
+          tags: ["Earthquake-prone"],
+          streetView: "img/s4.jpg",
+          streetName: "Palayan Road",
+          streetDescription:
+            "Most houses remain stable, though minor plumbing issues exist (e.g., low water flow in some facilities). While not highly hazard-prone, moderate earthquake risks persist due to aging structures.",
+        },
+        {
+          id: 5,
+          name: "Stratum 5",
+          description:
+            "Solid structural foundations provide stability against quakes and fires. However, heavy rainfall consistently causes flooding in roads and surrounding areas. This disrupts mobility and threatens property and health. The stratum is considered highly flood-prone.",
+          address: "Palayan Road, Philipines",
+          category: "stratum 5",
+          lat: -3,
+          lng: 139.1,
+          severity: "medium",
+          tags: ["flood"],
+          streetView: "img/s5.jpg",
+          streetName: "Palayan Road",
+          streetDescription:
+            "Structures are stable, but heavy rains cause recurring road flooding that disrupts mobility and safety. The stratum is identified as highly flood-prone.",
+        },
+        {
+          id: 6,
+          name: "Stratum 6",
+          description:
+            "Overall structural condition is sound compared to other areas. Yet, residents report water infiltration during rainfall that damages walls and floors. This recurring seepage indicates gradual deterioration if unaddressed. The stratum is moderately flood-prone with lower risks of fire or earthquake.",
+          address: "Palayan Road, Philipines",
+          category: "stratum 6",
+          lat: -9,
+          lng: 150,
+          severity: "medium",
+          tags: ["flood"],
+          streetView: "img/s6.jpg",
+          streetName: "Palayan Road",
+          streetDescription:
+            "Houses are generally stable, but residents report water seepage during rainfall. This makes the stratum moderately flood-prone, though less vulnerable to fire or earthquakes.",
+        },
+      ];
+
+      // Create markers and add to map
+      const markers = [];
+      const markersGroup = L.layerGroup().addTo(map);
+
+      function getHazardColor(category) {
+        switch (category) {
+          case "stratum 1": // Yellow-Orange
+            return "#f3a519";
+          case "stratum 2": // Pink / Magenta
+            return "#f239e8";
+          case "stratum 3": // Blue
+            return "#5957ee";
+          case "stratum 4": // Green
+            return "#5c8c0c";
+          case "stratum 5": // Purple
+            return "#6d2468";
+          case "stratum 6": // Orange
+            return "#ff6600";
+          default: // fallback
+            return "#333333";
+        }
+      }
+
+      function addMarkers(filteredHazards) {
+        markersGroup.clearLayers();
+        markers.length = 0;
+        filteredHazards.forEach((hazard) => {
+          const color = getHazardColor(hazard.category);
+          const size = hazard.severity === "high" ? 10 : 8;
+
+          // For custom image, use custom coordinates
+          const x = (hazard.lng - 121.0) * 100;
+          const y = (14.7 - hazard.lat) * 100;
+
+          const marker = L.circleMarker([y, x], {
+            radius: size,
+            fillColor: color,
+            color: "#fff",
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.8,
+          }).addTo(markersGroup);
+
+          marker.bindTooltip(hazard.name, {
+            permanent: false,
+            direction: "top",
+          });
+
+          marker.on("click", () => {
+            showInfoPanel(hazard);
+          });
+
+          markers.push({ marker, hazard });
+        });
+      }
+
+      // Show info panel with hazard details
+      const infoPanel = document.getElementById("info-panel");
+      const placeNameEl = document.getElementById("place-name");
+      const placeAddressEl = document.getElementById("place-address");
+      const placeDescriptionEl = document.getElementById("place-description");
+      const hazardTagsEl = document.getElementById("hazard-tags");
+      const closeInfoBtn = document.getElementById("close-info");
+      const viewStreetBtn = document.getElementById("view-street-btn");
+
+      let currentHazard = null;
+
+      function showInfoPanel(hazard) {
+        currentHazard = hazard;
+        placeNameEl.textContent = hazard.name;
+        placeAddressEl.textContent = hazard.address;
+        placeDescriptionEl.textContent = hazard.description;
+
+        // Create hazard tags
+        hazardTagsEl.innerHTML = "";
+        hazard.tags.forEach((tag) => {
+          const span = document.createElement("span");
+          span.classList.add("hazard-tag", `hazard-${tag}`);
+          span.textContent = tag;
+          hazardTagsEl.appendChild(span);
+        });
+
+        infoPanel.style.display = "block";
+
+        // Center map on hazard
+        const x = (hazard.lng - 121.0) * 100;
+        const y = (14.7 - hazard.lat) * 100;
+        map.setView([y, x], 1);
+      }
+
+      closeInfoBtn.addEventListener("click", () => {
+        infoPanel.style.display = "none";
+        currentHazard = null;
+      });
+
+      // Street view modal functionality
+      const streetModal = new bootstrap.Modal(
+        document.getElementById("street-modal")
+      );
+      const streetNameEl = document.getElementById("street-name");
+      const streetImageEl = document.getElementById("street-image");
+      const streetDescriptionEl = document.getElementById("street-description");
+      const modalHazardsEl = document.getElementById("modal-hazards");
+
+      viewStreetBtn.addEventListener("click", () => {
+        if (!currentHazard) return;
+
+        streetNameEl.textContent = currentHazard.streetName;
+        streetImageEl.src = currentHazard.streetView;
+        streetDescriptionEl.textContent = currentHazard.streetDescription;
+
+        // Create hazard tags for modal
+        modalHazardsEl.innerHTML = "";
+        currentHazard.tags.forEach((tag) => {
+          const span = document.createElement("span");
+          span.classList.add("hazard-tag", `hazard-${tag}`);
+          span.textContent = tag;
+          modalHazardsEl.appendChild(span);
+        });
+
+        streetModal.show();
+      });
+
+      // Populate hazards list in sidebar
+      const placesList = document.querySelector(".places-list");
+
+      function populatePlacesList(filteredHazards) {
+        placesList.innerHTML = "";
+        if (filteredHazards.length === 0) {
+          placesList.innerHTML =
+            "<p class='p-3 text-center'>No hazards found.</p>";
+          return;
+        }
+        filteredHazards.forEach((hazard) => {
+          const placeItem = document.createElement("div");
+          placeItem.classList.add("card", "mb-2", "place-item");
+          placeItem.dataset.id = hazard.id;
+
+          placeItem.innerHTML = `
+            <div class="card-body py-2">
+              <h5 class="card-title mb-1">${hazard.name}</h5>
+              <p class="card-text mb-0">${hazard.description.substring(
+                0,
+                60
+              )}...</p>
+            </div>
+          `;
+
+          placeItem.addEventListener("click", () => {
+            showInfoPanel(hazard);
+            // Highlight marker
+            const markerObj = markers.find((m) => m.hazard.id === hazard.id);
+            if (markerObj) {
+              const x = (hazard.lng - 121.0) * 100;
+              const y = (14.7 - hazard.lat) * 100;
+              map.setView([y, x], 1);
+              markerObj.marker.openTooltip();
+            }
+          });
+
+          placesList.appendChild(placeItem);
+        });
+      }
+
+      // Category filtering
+      const categoryElements = document.querySelectorAll(".category");
+
+      categoryElements.forEach((catEl) => {
+        catEl.addEventListener("click", () => {
+          categoryElements.forEach((el) => el.classList.remove("active"));
+          catEl.classList.add("active");
+          const category = catEl.dataset.category;
+          filterHazards(category);
+        });
+      });
+
+      function filterHazards(category) {
+        let filtered;
+        if (category === "all") {
+          filtered = hazards;
+        } else {
+          filtered = hazards.filter((h) => h.category === category);
+        }
+        addMarkers(filtered);
+        populatePlacesList(filtered);
+        infoPanel.style.display = "none";
+      }
+
+      // Search functionality
+      const searchInput = document.getElementById("search-input");
+      const searchBtn = document.getElementById("search-btn");
+
+      searchBtn.addEventListener("click", () => {
+        const query = searchInput.value.trim().toLowerCase();
+        if (!query) {
+          // If empty, reset to current category filter
+          const activeCategory =
+            document.querySelector(".category.active").dataset.category;
+          filterHazards(activeCategory);
+          return;
+        }
+        const filtered = hazards.filter(
+          (h) =>
+            h.name.toLowerCase().includes(query) ||
+            h.description.toLowerCase().includes(query) ||
+            h.address.toLowerCase().includes(query) ||
+            h.tags.some((tag) => tag.toLowerCase().includes(query))
+        );
+        addMarkers(filtered);
+        populatePlacesList(filtered);
+        infoPanel.style.display = "none";
+      });
+
+      // Map controls
+      document.getElementById("zoom-in").addEventListener("click", () => {
+        map.zoomIn();
+      });
+
+      document.getElementById("zoom-out").addEventListener("click", () => {
+        map.zoomOut();
+      });
+
+      document.getElementById("locate-me").addEventListener("click", () => {
+        // Use Bootstrap toast for notification instead of alert
+        const alertElement = document.getElementById("sidebar-alert");
+        const alertText = document.getElementById("alert-text");
+        alertText.textContent =
+          "Location feature would use coordinates relative to your custom map";
+        alertElement.classList.remove("d-none");
+        setTimeout(() => {
+          alertElement.classList.add("d-none");
+        }, 3000);
+      });
+
+      // Sidebar toggle
+      const sidebar = document.getElementById("sidebar");
+      const toggleSidebarBtn = document.getElementById("toggle-sidebar");
+      toggleSidebarBtn.addEventListener("click", () => {
+        sidebar.classList.toggle("hidden");
+        toggleSidebarBtn.classList.toggle("sidebar-hidden");
+        // Change icon direction
+        const icon = toggleSidebarBtn.querySelector("i");
+        if (sidebar.classList.contains("hidden")) {
+          icon.classList.remove("fa-chevron-left");
+          icon.classList.add("fa-chevron-right");
+        } else {
+          icon.classList.remove("fa-chevron-right");
+          icon.classList.add("fa-chevron-left");
+        }
+      });
+
+      // Full screen toggle
+      const fullscreenToggle = document.getElementById("fullscreen-toggle");
+      let isFullscreen = false;
+
+      fullscreenToggle.addEventListener("click", () => {
+        if (isFullscreen) {
+          // Exit full screen
+          sidebar.classList.remove("hidden");
+          toggleSidebarBtn.classList.remove("sidebar-hidden");
+          toggleSidebarBtn.style.display = "flex";
+          fullscreenToggle.innerHTML =
+            '<i class="fas fa-expand"></i> Full Screen';
+        } else {
+          // Enter full screen
+          sidebar.classList.add("hidden");
+          toggleSidebarBtn.classList.add("sidebar-hidden");
+          toggleSidebarBtn.style.display = "none";
+          fullscreenToggle.innerHTML =
+            '<i class="fas fa-compress"></i> Exit Full Screen';
+        }
+        isFullscreen = !isFullscreen;
+
+        // Trigger map resize to ensure proper rendering
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 300);
+      });
+
+      // Initialize with all hazards
+      addMarkers(hazards);
+      populatePlacesList(hazards);
+
+      function toggleLegend() {
+        const box = document.getElementById("legendBox");
+        const icon = document.getElementById("toggleIcon");
+
+        box.classList.toggle("collapsed");
+        icon.textContent = box.classList.contains("collapsed") ? "+" : "–";
+      }
+    </script>
+  </body>
+</html>
